@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Ticket, Users, Zap, Trophy, Filter, ArrowRight } from 'lucide-react';
 import useStore from '../store/useStore';
 
-const ACTIVITIES = [
+export const ACTIVITIES = [
     {
         id: 1,
         title: 'Bumping Cars',
@@ -48,7 +48,23 @@ const ACTIVITIES = [
         category: 'Gaming',
         image: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=600&q=80',
         desc: 'Modern VR games and classic arcades for every gamer.'
-    }
+    },
+    // Replicating items to reach 20 as requested
+    { id: 6, title: 'VR Experience', price: 300, ageGroup: '10+', category: 'Gaming', image: 'https://images.unsplash.com/photo-1622979135225-d2ba269fb1bd?auto=format&fit=crop&w=600&q=80', desc: 'Immersive Virtual Reality adventures.' },
+    { id: 7, title: 'Bowling Alley', price: 400, ageGroup: 'All Ages', category: 'Sports', image: 'https://images.unsplash.com/photo-1538566914565-d4c382103348?auto=format&fit=crop&w=600&q=80', desc: 'Classic ten-pin bowling fun.' },
+    { id: 8, title: 'Laser Tag', price: 350, ageGroup: '8+', category: 'Action', image: 'https://images.unsplash.com/photo-1555567540-c3d32847c20f?auto=format&fit=crop&w=600&q=80', desc: 'Tactical laser combat arena.' },
+    { id: 9, title: 'Kids Soft Play', price: 250, ageGroup: 'Toddlers', category: 'Kids', image: 'https://images.unsplash.com/photo-1516627145497-ae6968895b74?auto=format&fit=crop&w=600&q=80', desc: 'Safe and soft play area for little ones.' },
+    { id: 10, title: 'Go Karting', price: 600, ageGroup: '12+', category: 'Action', image: 'https://images.unsplash.com/photo-1505521377774-103a8cc2f735?auto=format&fit=crop&w=600&q=80', desc: 'Speed and thrills on the track.' },
+    { id: 11, title: 'Archery', price: 150, ageGroup: '10+', category: 'Sports', image: 'https://images.unsplash.com/photo-1511066922412-1d54cb6c5073?auto=format&fit=crop&w=600&q=80', desc: 'Test your aim and precision.' },
+    { id: 12, title: 'Rope Course', price: 200, ageGroup: '8+', category: 'Adventure', image: 'https://images.unsplash.com/photo-1519074069444-1ba4fff66d16?auto=format&fit=crop&w=600&q=80', desc: 'Challenging obstacles high above.' },
+    { id: 13, title: 'Bull Ride', price: 100, ageGroup: '10+', category: 'Rides', image: 'https://images.unsplash.com/photo-1518717758536-85ae29035b6d?auto=format&fit=crop&w=600&q=80', desc: 'Can you stay on the mechanical bull?' },
+    { id: 14, title: 'Mini Golf', price: 180, ageGroup: 'All Ages', category: 'Sports', image: 'https://images.unsplash.com/photo-1526676037777-05a232554f77?auto=format&fit=crop&w=600&q=80', desc: 'Fun putting challenges.' },
+    { id: 15, title: 'Mirror Maze', price: 120, ageGroup: 'All Ages', category: 'Adventure', image: 'https://images.unsplash.com/photo-1505322965620-332e92c30084?auto=format&fit=crop&w=600&q=80', desc: 'Find your way through the reflections.' },
+    { id: 16, title: 'Horror House', price: 200, ageGroup: '12+', category: 'Adventure', image: 'https://images.unsplash.com/photo-1509248961158-e54f6934749c?auto=format&fit=crop&w=600&q=80', desc: 'Spooky thrills and scares.' },
+    { id: 17, title: 'Escape Room', price: 800, ageGroup: 'Group', category: 'Puzzle', image: 'https://images.unsplash.com/photo-1517260739337-6799d239ce83?auto=format&fit=crop&w=600&q=80', desc: 'Solve puzzles to escape in time.' },
+    { id: 18, title: 'Paintball', price: 450, ageGroup: '14+', category: 'Action', image: 'https://images.unsplash.com/photo-1555567959-199c9684c30c?auto=format&fit=crop&w=600&q=80', desc: 'Color combat with friends.' },
+    { id: 19, title: 'Water Boat', price: 150, ageGroup: 'Kids', category: 'Rides', image: 'https://images.unsplash.com/photo-1563299796-b729d0af54a5?auto=format&fit=crop&w=600&q=80', desc: 'Gentle boating fun for kids.' },
+    { id: 20, title: 'Ferris Wheel', price: 250, ageGroup: 'All Ages', category: 'Rides', image: 'https://images.unsplash.com/photo-1528659567210-985ea83c9284?auto=format&fit=crop&w=600&q=80', desc: 'Classic views from the top.' }
 ];
 
 const Play = () => {

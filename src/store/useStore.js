@@ -10,18 +10,18 @@ const useStore = create(
 
             toggleCart: () => set((state) => ({ isCartOpen: !state.isCartOpen })),
 
-            addToCart: (item) => {
+            addToCart: (item, quantity = 1) => {
                 const cart = get().cart;
                 const existingItem = cart.find((i) => i.id === item.id);
 
                 if (existingItem) {
                     set({
                         cart: cart.map((i) =>
-                            i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i
+                            i.id === item.id ? { ...i, quantity: i.quantity + quantity } : i
                         ),
                     });
                 } else {
-                    set({ cart: [...cart, { ...item, quantity: 1 }] });
+                    set({ cart: [...cart, { ...item, quantity: quantity }] });
                 }
                 // Automatically open cart on add
                 set({ isCartOpen: true });

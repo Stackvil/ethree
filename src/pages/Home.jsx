@@ -1,9 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ShoppingCart, Play, Zap, Utensils, Star, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import useStore from '../store/useStore';
+import { ACTIVITIES } from './Play';
+import RideCard from '../components/RideCard';
 
 const Home = () => {
+    const { addToCart, toggleCart } = useStore();
+    const featuredRide = ACTIVITIES[0]; // Kept just in case or can be removed if not used elsewhere
+
+    // Handlers moved to RideCard component to manage individual quantity states
     const philosophy = [
         { title: 'Eat', icon: <Utensils className="text-white" size={32} />, color: 'bg-sunset-orange', desc: 'A Gastronomic journey through the best stalls in Vijayawada.' },
         { title: 'Enjoy', icon: <Zap className="text-white" size={32} />, color: 'bg-riverside-teal', desc: 'Soak in the refreshing breeze on the banks of the Krishna River.' },
@@ -13,7 +20,8 @@ const Home = () => {
     return (
         <div className="flex flex-col">
             {/* Hero Section */}
-            <section className="relative h-screen bg-charcoal-grey overflow-hidden">
+            {/* Hero Section */}
+            <section className="relative min-h-screen bg-charcoal-grey">
                 {/* Parallax Background Placeholder */}
                 <div
                     className="absolute inset-0 z-0 bg-fixed bg-cover bg-center opacity-60"
@@ -21,37 +29,31 @@ const Home = () => {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-charcoal-grey to-transparent z-10" />
 
-                <div className="relative z-20 container mx-auto h-full flex flex-col items-center justify-center text-center px-6">
+                <div className="relative z-20 container mx-auto flex flex-col justify-center px-6 py-32">
                     <motion.div
                         initial={{ opacity: 0, y: 30 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.8 }}
+                        className="w-full text-center mb-12"
                     >
-                        <span className="text-sunset-orange font-bold uppercase tracking-[0.3em] mb-4 block">Welcome to Vijayawada's Premier Hub</span>
-                        <h1 className="text-5xl md:text-8xl font-heading font-bold text-white mb-8 leading-none">
-                            EAT. ENJOY.<br />
-                            <span className="text-riverside-teal">ENTERTAINMENT.</span>
+                        <h1 className="text-4xl md:text-6xl font-heading font-bold text-white mb-4 leading-tight">
+                            Start Booking Your Fun
                         </h1>
-                        <div className="flex flex-wrap gap-4 justify-center mt-8">
-                            <Link to="/dine" className="btn-orange text-lg px-10 py-4 flex items-center gap-2">
-                                Order Food <ShoppingCart size={20} />
-                            </Link>
-                            <Link to="/play" className="bg-white text-charcoal-grey px-10 py-4 rounded-lg font-bold text-lg hover:bg-gray-100 transition-all">
-                                Explore Play Zone
-                            </Link>
-                        </div>
+                        <p className="text-slate-300 text-lg">Select a ride below to book instantly</p>
                     </motion.div>
-                </div>
 
-                {/* Trust Signal Badge */}
-                <div className="absolute bottom-24 right-6 md:right-12 z-20">
-                    <div className="bg-white p-4 rounded-2xl shadow-2xl flex items-center gap-4">
-                        <div className="bg-green-100 p-3 rounded-xl text-green-600 font-bold text-xl">4.3</div>
-                        <div>
-                            <div className="flex text-yellow-500">
-                                {[...Array(5)].map((_, i) => <Star key={i} size={14} fill="currentColor" />)}
-                            </div>
-                            <p className="text-xs font-bold text-gray-500">329+ GOOGLE REVIEWS</p>
+                    <div className="w-full">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                            {ACTIVITIES.map((ride, index) => (
+                                <motion.div
+                                    key={ride.id}
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    transition={{ delay: index * 0.05 }}
+                                >
+                                    <RideCard ride={ride} />
+                                </motion.div>
+                            ))}
                         </div>
                     </div>
                 </div>

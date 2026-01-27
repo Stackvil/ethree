@@ -19,6 +19,8 @@ export default function POS() {
     const [showCheckoutModal, setShowCheckoutModal] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [showMobileCart, setShowMobileCart] = useState(false);
+    const [loyaltyPoints, setLoyaltyPoints] = useState<number | null>(null);
+    const [loadingPoints, setLoadingPoints] = useState(false);
 
     // State to hold the ticket currently being printed/reprinted
     const [printData, setPrintData] = useState<{
@@ -64,6 +66,38 @@ export default function POS() {
             syncOfflineTickets();
         }
     }, [isOnline, pendingCount]);
+
+    // Fetch Loyalty Points
+    useEffect(() => {
+        if (mobileNumber.length === 10) {
+            fetchLoyaltyPoints(mobileNumber);
+        } else {
+            setLoyaltyPoints(null);
+        }
+    }, [mobileNumber]);
+
+    const fetchLoyaltyPoints = async (mobile: string) => {
+        setLoadingPoints(true);
+        try {
+            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+            const res = await axios.get(`${API_URL}/api/loyalty/${mobile}`);
+            setLoyaltyPoints(res.data.points);
+        } catch (e) {
+            console.error('Failed to fetch points', e);
+        } finally {
+            setLoadingPoints(false);
+        }
+    };
+
+    const addRewardToCart = () => {
+        setCart(prev => [...prev, {
+            id: 'reward-1',
+            name: '🎁 Free Priority Ride',
+            price: 0,
+            quantity: 1,
+            description: 'Loyalty Reward (100 Pts)'
+        }]);
+    };
 
     const syncOfflineTickets = async () => {
         setIsSyncing(true);
@@ -199,9 +233,37 @@ export default function POS() {
 
         // Save to Backend with Offline Fallback
         try {
+            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+
             if (!isOnline) throw new Error('Offline');
-            // Save all tickets (Main transaction + Coupons)
-            await Promise.all(ticketsToSave.map(t => axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/tickets`, t)));
+
+            // 1. Save Tickets
+            await Promise.all(ticketsToSave.map(t => axios.post(`${API_URL}/api/tickets`, t)));
+
+            // 2. Process Loyalty (Fire & Forget to not block printing)
+            if (mobileNumber) {
+                // Earn Points
+                if (totalWithTax > 0) {
+                    axios.post(`${API_URL}/api/loyalty/earn`, {
+                        mobile: mobileNumber,
+                        amount: totalWithTax,
+                        ticketId
+                    }).catch(err => console.error('Loyalty Earn Failed:', err));
+                }
+
+                // Redeem Points (if reward is in cart)
+                const rewardItem = cart.find(i => i.id === 'reward-1');
+                if (rewardItem) {
+                    // Determine how many rewards were used
+                    for (let i = 0; i < rewardItem.quantity; i++) {
+                        axios.post(`${API_URL}/api/loyalty/redeem`, {
+                            mobile: mobileNumber,
+                            ticketId
+                        }).catch(err => console.error('Loyalty Redeem Failed:', err));
+                    }
+                }
+            }
+
         } catch (error) {
             console.log('Backend unavailable, queueing ticket locally.');
             const pending = JSON.parse(localStorage.getItem('pending_tickets') || '[]');

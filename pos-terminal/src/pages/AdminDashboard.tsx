@@ -45,25 +45,10 @@ export default function AdminDashboard() {
             const API_URL = import.meta.env.VITE_API_URL || '';
             const response = await axios.get(`${API_URL}/api/tickets`);
 
-            // Filter out Master Tickets that are purely for Combos (to avoid double counting)
-            // A Pure Combo Master has items with id '21' and is NOT a sub-ticket (no parentId check available on legacy, so check ID format)
-            // Legacy sub-tickets have ID format ending in -C<number>
-            const validTickets = response.data.filter((t: any) => {
-                // If ticket has items and ALL items are ID '21' (Combo)
-                const isComboMaster = t.items && t.items.length > 0 && t.items.every((i: any) => i.id === '21');
-
-                // If it's a combo master, we only want to keep it if it's actually a sub-ticket (which also has id '21' items).
-                // But sub-tickets usually have 'isCoupon' or 'parentId'. 
-                // If those fields are missing in legacy, we check if ID looks like a master (no -C suffix).
-
-                if (isComboMaster) {
-                    // Check if it is a Sub-Ticket (keep) or Master (discard)
-                    const isSubTicket = t.id.includes('-C') || t.isCoupon;
-                    return isSubTicket; // Keep only if it's a sub-ticket
-                }
-
-                return true; // Keep regular tickets
-            });
+            // FIX: Filter out "Sub-Tickets" (Coupons) to avoid double counting transactions.
+            // We only want to show the "Master Ticket" (Receipt) which contains the total amount.
+            // Master tickets do NOT have a parentId.
+            const validTickets = response.data.filter((t: any) => !t.parentId);
 
             setTickets(validTickets);
         } catch (error) {

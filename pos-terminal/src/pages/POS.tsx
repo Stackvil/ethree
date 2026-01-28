@@ -175,6 +175,7 @@ export default function POS() {
 
         // Removed unused state setters
 
+        const loggedUser = JSON.parse(localStorage.getItem('user') || '{}');
         const ticketData = {
             id: ticketId,
             amount: totalWithTax,
@@ -183,6 +184,7 @@ export default function POS() {
             status: 'valid',
             mobile: mobileNumber,
             paymentMode: (paymentMode || 'cash') as 'cash' | 'upi',
+            createdBy: loggedUser.name || 'Unknown',
             createdAt: new Date().toISOString()
         };
 
@@ -203,6 +205,7 @@ export default function POS() {
                         status: 'valid',
                         mobile: mobileNumber,
                         paymentMode: (paymentMode || 'cash') as 'cash' | 'upi',
+                        createdBy: loggedUser.name || 'Unknown',
                         createdAt: new Date().toISOString(),
                         isCoupon: true,
                         parentId: ticketId

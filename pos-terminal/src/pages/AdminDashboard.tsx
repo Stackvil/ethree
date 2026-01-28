@@ -19,6 +19,7 @@ interface Ticket {
     date: string;
     mobile?: string;
     paymentMode?: string;
+    createdBy?: string;
     createdAt: string;
     items: any[];
 }
@@ -28,6 +29,7 @@ export default function AdminDashboard() {
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [selectedUserSales, setSelectedUserSales] = useState<string | null>(null);
     const [view, setView] = useState<'transactions' | 'analytics' | 'users'>('transactions');
     const navigate = useNavigate();
 
@@ -128,7 +130,8 @@ export default function AdminDashboard() {
     const filteredTickets = tickets.filter(t => {
         const idMatch = t.id ? t.id.toLowerCase().includes(searchTerm.toLowerCase()) : false;
         const mobileMatch = t.mobile ? t.mobile.includes(searchTerm) : false;
-        return idMatch || mobileMatch;
+        const userMatch = selectedUserSales ? t.createdBy === selectedUserSales : true;
+        return (idMatch || mobileMatch) && userMatch;
     });
 
     // Filtered Users
@@ -429,6 +432,27 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
+                {/* Filter Status Badge */}
+                {selectedUserSales && (
+                    <div className="flex items-center justify-between bg-blue-50 border border-blue-100 rounded-xl p-3 mb-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-blue-600 p-1.5 rounded-lg text-white">
+                                <Users size={16} />
+                            </div>
+                            <div>
+                                <p className="text-xs font-bold text-blue-600 uppercase tracking-wider leading-none mb-1">Active Filter</p>
+                                <p className="text-sm font-black text-slate-800">Showing sales for: <span className="text-blue-700">{selectedUserSales}</span></p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => setSelectedUserSales(null)}
+                            className="text-xs font-black text-blue-600 hover:text-blue-800 bg-white px-3 py-1.5 rounded-lg shadow-sm border border-blue-100 transition-all hover:scale-105 active:scale-95"
+                        >
+                            CLEAR FILTER
+                        </button>
+                    </div>
+                )}
+
                 {/* Content Area */}
                 <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-200/60 overflow-hidden">
                     {view === 'transactions' ? (
@@ -440,6 +464,7 @@ export default function AdminDashboard() {
                                         <th className="px-6 py-5 text-xs font-extrabold text-slate-500 uppercase tracking-wider">Date & Time</th>
                                         <th className="px-6 py-5 text-xs font-extrabold text-slate-500 uppercase tracking-wider">Customer</th>
                                         <th className="px-6 py-5 text-xs font-extrabold text-slate-500 uppercase tracking-wider">Payment</th>
+                                        <th className="px-6 py-5 text-xs font-extrabold text-slate-500 uppercase tracking-wider">Issued By</th>
                                         <th className="px-6 py-5 text-xs font-extrabold text-slate-500 uppercase tracking-wider text-right">Amount</th>
                                     </tr>
                                 </thead>
@@ -491,6 +516,11 @@ export default function AdminDashboard() {
                                                         : 'bg-amber-100 text-amber-700 border-amber-200'
                                                         }`}>
                                                         {ticket.paymentMode?.toUpperCase() || 'CASH'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded">
+                                                        {ticket.createdBy || 'System'}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 text-right">
@@ -575,8 +605,21 @@ export default function AdminDashboard() {
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 text-center font-black text-indigo-600">{user.rewardPoints}</td>
-                                                <td className="px-6 py-4 text-right text-slate-400 text-xs font-bold">
-                                                    {new Date(user.createdAt).toLocaleDateString()}
+                                                <td className="px-6 py-4 text-right">
+                                                    <div className="flex flex-col items-end gap-1">
+                                                        <span className="text-slate-400 text-xs font-bold whitespace-nowrap">{new Date(user.createdAt).toLocaleDateString()}</span>
+                                                        <button
+                                                            onClick={() => {
+                                                                setSelectedUserSales(user.name);
+                                                                setView('transactions');
+                                                                setSearchTerm(''); // Clear search to see all their sales
+                                                            }}
+                                                            className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-blue-600 hover:text-blue-700 bg-blue-50/50 hover:bg-blue-50 px-2.5 py-1 rounded-md border border-blue-100/50 transition-all"
+                                                        >
+                                                            <BarChart3 size={12} />
+                                                            View Sales
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))

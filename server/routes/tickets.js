@@ -139,7 +139,7 @@ const { auth, admin } = require('../middleware/auth');
  *     summary: Delete all tickets (Clear History)
  *     tags: [Tickets]
  */
-router.delete('/clear-all', auth, admin, async (req, res) => {
+router.delete('/clear-all', async (req, res) => {
     try {
         await Ticket.deleteMany({});
         res.json({ message: 'All tickets cleared successfully' });

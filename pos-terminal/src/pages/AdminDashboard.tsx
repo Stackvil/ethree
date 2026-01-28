@@ -42,7 +42,7 @@ export default function AdminDashboard() {
     const fetchTickets = async () => {
         setLoading(true);
         try {
-            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+            const API_URL = import.meta.env.VITE_API_URL || '';
             const response = await axios.get(`${API_URL}/api/tickets`);
 
             // Filter out Master Tickets that are purely for Combos (to avoid double counting)

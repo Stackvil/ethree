@@ -27,7 +27,7 @@ export default function Accounts() {
     const fetchTickets = async () => {
         setLoading(true);
         try {
-            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+            const API_URL = import.meta.env.VITE_API_URL || '';
             const response = await axios.get(`${API_URL}/api/tickets`);
             // Filter only UPI tickets for Accounts page
             const upiTickets = response.data.filter((t: any) => t.paymentMode?.toLowerCase() === 'upi');

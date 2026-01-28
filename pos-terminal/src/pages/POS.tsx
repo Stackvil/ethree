@@ -53,7 +53,8 @@ export default function POS() {
         const fetchRides = async () => {
             setLoadingRides(true);
             try {
-                const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+                // Use relative path (/api) in production by default
+                const API_URL = import.meta.env.VITE_API_URL || '';
                 const response = await axios.get(`${API_URL}/api/products`);
                 setRides(response.data);
             } catch (error) {
@@ -107,7 +108,7 @@ export default function POS() {
     const fetchLoyaltyPoints = async (mobile: string) => {
         setLoadingPoints(true);
         try {
-            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+            const API_URL = import.meta.env.VITE_API_URL || '';
             const res = await axios.get(`${API_URL}/api/loyalty/${mobile}`);
             if (res.data.points !== undefined) {
                 setLoyaltyPoints(res.data.points);

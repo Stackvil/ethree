@@ -55,7 +55,8 @@ export default function POS() {
             try {
                 // Use relative path (/api) in production by default
                 const API_URL = import.meta.env.VITE_API_URL || '';
-                const response = await axios.get(`${API_URL}/api/products`);
+                // Append timestamp to prevent caching
+                const response = await axios.get(`${API_URL}/api/products?t=${Date.now()}`);
                 setRides(response.data);
             } catch (error) {
                 console.error('Failed to fetch rides', error);

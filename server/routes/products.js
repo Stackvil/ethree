@@ -98,11 +98,36 @@ router.post('/', auth, admin, async (req, res) => {
  *     tags: [Products]
  */
 router.get('/force-reset', async (req, res) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+
     try {
+        console.log('Force Reset Triggered');
         await seedInitialData();
-        res.json({ message: 'Database forcefully reset to defaults.' });
+        const count = await Product.countDocuments();
+        res.json({ message: 'Database forcefully reset to defaults.', productCount: count, timestamp: new Date().toISOString() });
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        console.error('Reset Failed:', err);
+        res.status(500).json({ message: err.message, stack: err.stack });
+    }
+});
+
+router.get('/debug-db', async (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    try {
+        const count = await Product.countDocuments();
+        const products = await Product.find({}, 'name price id').limit(5);
+        res.json({
+            status: 'Connected',
+            dbName: mongoose.connection.name,
+            host: mongoose.connection.host,
+            productCount: count,
+            sample: products,
+            time: new Date().toISOString()
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 

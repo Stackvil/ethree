@@ -61,7 +61,7 @@ export default function RideManagement() {
         if (!editingRide) return;
 
         try {
-            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+            const API_URL = import.meta.env.VITE_API_URL || '';
             const token = localStorage.getItem('token');
             await axios.put(`${API_URL}/api/products/${editingRide._id}`, formData, {
                 headers: { Authorization: `Bearer ${token}` }
@@ -78,7 +78,7 @@ export default function RideManagement() {
         if (!confirm('Are you sure you want to delete this ride?')) return;
 
         try {
-            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+            const API_URL = import.meta.env.VITE_API_URL || '';
             const token = localStorage.getItem('token');
             await axios.delete(`${API_URL}/api/products/${mongoId}`, {
                 headers: { Authorization: `Bearer ${token}` }

@@ -149,15 +149,12 @@ export default function POS() {
             return;
         }
 
-        if (pending.length === 0) {
-            setIsSyncing(false);
-            return;
-        }
+        if (pending.length === 0) return;
 
-        console.log(`Attempting to sync ${pending.length} tickets to ${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/tickets`);
-
+        console.log(`Attempting to sync ${pending.length} tickets to ${import.meta.env.VITE_API_URL || ''}/api/tickets`);
+        setIsSyncing(true);
         try {
-            await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/tickets`, pending);
+            await axios.post(`${import.meta.env.VITE_API_URL || ''}/api/tickets`, pending);
             localStorage.setItem('pending_tickets', '[]');
             setPendingCount(0);
             alert(`Synced ${pending.length} offline tickets to server.`);
@@ -305,7 +302,7 @@ export default function POS() {
         // 4. Save to Backend in Background (Non-blocking)
         const saveToBackend = async () => {
             try {
-                const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+                const API_URL = import.meta.env.VITE_API_URL || '';
                 if (!isOnline) throw new Error('Offline');
 
                 // Bulk Save Tickets
@@ -392,8 +389,9 @@ export default function POS() {
 
         // Save New Transaction to Backend
         try {
+            const API_URL = import.meta.env.VITE_API_URL || '';
             if (!isOnline) throw new Error('Offline');
-            await Promise.all(ticketsToSave.map(t => axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/tickets`, t)));
+            await Promise.all(ticketsToSave.map(t => axios.post(`${API_URL}/api/tickets`, t)));
         } catch (error) {
             console.log('Backend unavailable during reprint, queueing locally.');
             const pending = JSON.parse(localStorage.getItem('pending_tickets') || '[]');

@@ -4,7 +4,7 @@ import { RideCard } from '../components/RideCard';
 import { Cart } from '../components/Cart';
 import { Ticket } from '../components/Ticket';
 // TicketVerifier removed
-import { Ticket as TicketIcon, ScanLine, LogOut, Wifi, WifiOff, RefreshCw } from 'lucide-react';
+import { Ticket as TicketIcon, ScanLine, LogOut, WifiOff, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
@@ -176,45 +176,53 @@ export default function POS() {
         // Removed unused state setters
 
         const loggedUser = JSON.parse(localStorage.getItem('user') || '{}');
-        const ticketData = {
-            id: ticketId,
-            amount: totalWithTax,
-            date: date,
-            items: cart,
-            status: 'valid',
-            mobile: mobileNumber,
-            paymentMode: (paymentMode || 'cash') as 'cash' | 'upi',
-            createdBy: loggedUser.name || 'Unknown',
-            createdAt: new Date().toISOString()
-        };
 
-        // Handle Combo Tickets (Generate 5 separate tickets for each Combo)
-        const ticketsToSave = [ticketData];
+        // Handle Split Saving: Regular Items vs Combo Items
+        const ticketsToSave: any[] = [];
         const subTickets: any[] = [];
         let onlyCombos = true;
 
-        cart.forEach(item => {
-            if (item.id === '21') { // Combo Ticket ID
-                for (let i = 0; i < item.quantity * 5; i++) {
-                    const subId = `${ticketId}-C${i + 1}`;
-                    const subTicket = {
-                        id: subId,
-                        amount: 100, // Explicit value per ride
-                        date: date,
-                        items: [{ ...item, quantity: 1, name: 'ANY RIDE', price: 100 }], // Rename for coupon
-                        status: 'valid',
-                        mobile: mobileNumber,
-                        paymentMode: (paymentMode || 'cash') as 'cash' | 'upi',
-                        createdBy: loggedUser.name || 'Unknown',
-                        createdAt: new Date().toISOString(),
-                        isCoupon: true,
-                        parentId: ticketId
-                    };
-                    ticketsToSave.push(subTicket);
-                    subTickets.push(subTicket);
-                }
-            } else {
-                onlyCombos = false;
+        const regularItems = cart.filter(item => item.id !== '21');
+        const comboItems = cart.filter(item => item.id === '21');
+
+        // 1. Prepare Regular Ticket (if any regular items exist)
+        if (regularItems.length > 0) {
+            onlyCombos = false;
+            const regularTotal = regularItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const regularTicket = {
+                id: ticketId,
+                amount: regularTotal,
+                date: date,
+                items: regularItems,
+                status: 'valid',
+                mobile: mobileNumber,
+                paymentMode: (paymentMode || 'cash') as 'cash' | 'upi',
+                createdBy: loggedUser.name || 'Unknown',
+                createdAt: new Date().toISOString()
+            };
+            ticketsToSave.push(regularTicket);
+        }
+
+        // 2. Prepare Combo Sub-Tickets
+        comboItems.forEach(item => {
+            // Generate 5 tickets for each combo quantity
+            for (let i = 0; i < item.quantity * 5; i++) {
+                const subId = `${ticketId}-C${subTickets.length + 1}`;
+                const subTicket = {
+                    id: subId,
+                    amount: 100, // Fixed price per sub-ticket
+                    date: date,
+                    items: [{ ...item, quantity: 1, name: 'ANY RIDE', price: 100 }],
+                    status: 'valid',
+                    mobile: mobileNumber,
+                    paymentMode: (paymentMode || 'cash') as 'cash' | 'upi',
+                    createdBy: loggedUser.name || 'Unknown',
+                    createdAt: new Date().toISOString(),
+                    isCoupon: true,
+                    parentId: ticketId
+                };
+                ticketsToSave.push(subTicket);
+                subTickets.push(subTicket);
             }
         });
 
@@ -375,58 +383,64 @@ export default function POS() {
         <div className="min-h-screen bg-slate-100 font-sans text-slate-900">
             {/* Screen Layout */}
             <div className="print:hidden flex flex-col h-screen">
-                <header className="bg-blue-900 text-amber-400 p-4 shadow-md z-10">
+                <header className="bg-slate-900 border-b border-slate-800 text-white p-3 md:p-4 shadow-xl z-20 sticky top-0">
                     <div className="container mx-auto flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <div className="relative">
+                        {/* Logo & Brand */}
+                        <div className="flex items-center gap-3 md:gap-4">
+                            <div className="relative group">
+                                <div className="absolute -inset-0.5 bg-gradient-to-r from-amber-500 to-amber-300 rounded-lg blur opacity-50 group-hover:opacity-100 transition duration-200"></div>
                                 <img
-                                    src="/e3logo.jpeg"
-                                    alt="Ethree Logo"
-                                    className="relative w-12 h-12 rounded-lg object-contain bg-white"
+                                    src="/E4LOGO.jpeg"
+                                    alt="E4 Logo"
+                                    className="relative w-10 h-10 md:w-12 md:h-12 rounded-lg object-contain bg-white ring-1 ring-slate-900"
                                 />
                             </div>
                             <div>
-                                <h1 className="text-xl font-extrabold tracking-tight text-white leading-tight">ETHREE POS</h1>
+                                <h1 className="text-lg md:text-xl font-black tracking-tight text-white leading-none">EFOUR <span className="text-amber-400">POS</span></h1>
+                                <p className="text-[10px] md:text-xs text-slate-400 font-medium tracking-wide hidden sm:block">ELURU ENTERTAINMENT NETWORK</p>
                             </div>
 
-                            {/* Offline Indicator */}
-                            <div className="ml-4 flex items-center gap-2">
+                            {/* Status Indicators (Mobile Optimized) */}
+                            <div className="ml-2 md:ml-4 flex items-center gap-2">
                                 {isOnline ? (
-                                    <div className="px-2 py-1 bg-emerald-500/20 text-emerald-300 text-xs rounded-full flex items-center gap-1 border border-emerald-500/30">
-                                        <Wifi size={14} />
-                                        <span>Online</span>
+                                    <div className="px-2 py-0.5 md:py-1 bg-emerald-500/10 text-emerald-400 text-[10px] md:text-xs font-bold rounded-full flex items-center gap-1 border border-emerald-500/20 backdrop-blur-sm">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></div>
+                                        <span className="hidden md:inline">Online</span>
                                     </div>
                                 ) : (
-                                    <div className="px-2 py-1 bg-red-500/20 text-red-300 text-xs rounded-full flex items-center gap-1 border border-red-500/30 animate-pulse">
-                                        <WifiOff size={14} />
+                                    <div className="px-2 py-0.5 md:py-1 bg-rose-500/10 text-rose-400 text-[10px] md:text-xs font-bold rounded-full flex items-center gap-1 border border-rose-500/20 backdrop-blur-sm">
+                                        <WifiOff size={10} />
                                         <span>Offline</span>
                                     </div>
                                 )}
 
                                 {pendingCount > 0 && (
-                                    <div className="px-2 py-1 bg-amber-500/20 text-amber-300 text-xs rounded-full flex items-center gap-1 border border-amber-500/30">
-                                        <RefreshCw size={14} className={isSyncing ? "animate-spin" : ""} />
-                                        <span>{pendingCount} Pending</span>
+                                    <div className="px-2 py-0.5 md:py-1 bg-amber-500/10 text-amber-400 text-[10px] md:text-xs font-bold rounded-full flex items-center gap-1 border border-amber-500/20">
+                                        <RefreshCw size={10} className={isSyncing ? "animate-spin" : ""} />
+                                        <span>{pendingCount}</span>
                                     </div>
                                 )}
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-4">
+                        {/* Actions */}
+                        <div className="flex items-center gap-2 md:gap-4">
                             <button
                                 onClick={() => navigate('/verify')}
-                                className="flex items-center gap-2 bg-blue-800 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg transition-colors border border-blue-700"
+                                className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white px-3 py-2 md:px-4 md:py-2 rounded-xl transition-all border border-slate-700 active:scale-95"
                             >
                                 <ScanLine size={18} />
-                                <span>Verify Tickets</span>
+                                <span className="hidden md:inline font-bold text-sm">Verify</span>
                             </button>
-                            <div className="h-8 w-px bg-slate-800 mx-1"></div>
+
+                            <div className="h-6 md:h-8 w-px bg-slate-800 mx-0.5"></div>
+
                             <button
                                 onClick={handleLogout}
-                                className="group flex items-center gap-2 text-slate-400 hover:text-rose-400 transition-colors px-2 py-1"
+                                className="group relative p-2 md:px-3 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
                                 title="Logout"
                             >
-                                <LogOut size={20} className="group-hover:-translate-x-0.5 transition-transform" />
+                                <LogOut size={20} className="relative z-10" />
                             </button>
                         </div>
                     </div>
@@ -439,7 +453,7 @@ export default function POS() {
                                 <span className="w-1.5 h-6 md:h-8 bg-gradient-to-b from-amber-400 to-amber-600 rounded-full shadow-sm"></span>
                                 Available Rides
                             </h2>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4 pb-24 md:pb-0">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-2 md:gap-3 pb-24 md:pb-0">
                                 {rides.map(ride => (
                                     <RideCard key={ride.id} ride={ride} onAdd={addToCart} />
                                 ))}

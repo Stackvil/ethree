@@ -40,41 +40,42 @@ export default function Login() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 relative overflow-hidden">
-            {/* Background Effects */}
-            <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-10 blur-sm"></div>
-            <div className="absolute inset-0 bg-gradient-to-b from-slate-900/40 via-slate-900/60 to-slate-900"></div>
+        <div className="min-h-screen bg-[#a855f7] flex items-center justify-center p-4 relative overflow-hidden">
+            {/* Background Image */}
+            <div className="absolute inset-0 bg-[url('/blur-background-vibrant-ferris-wheel-600nw-2588560711.webp')] bg-cover bg-center"></div>
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-900/40 to-slate-900/60 backdrop-blur-[2px]"></div>
 
-            <div className="bg-white/10 backdrop-blur-xl rounded-3xl shadow-2xl w-full max-w-md overflow-hidden border border-white/10 relative z-10 animate-in fade-in zoom-in duration-500">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-white/20 relative z-10 animate-in fade-in zoom-in duration-500">
                 <div className="p-8 pt-10">
                     <div className="flex justify-center mb-6">
-                        <div className="relative">
+                        <div className="relative group">
+                            <div className="absolute -inset-0.5 bg-gradient-to-r from-amber-500 to-amber-300 rounded-2xl blur opacity-30 group-hover:opacity-50 transition duration-200"></div>
                             <img
-                                src="/e3logo.jpeg"
-                                alt="Ethree Logo"
-                                className="w-24 h-24 rounded-2xl object-contain bg-white shadow-xl"
+                                src="/E4LOGO.jpeg"
+                                alt="E4 Logo"
+                                className="relative w-24 h-24 rounded-2xl object-contain bg-white shadow-sm ring-1 ring-slate-100"
                             />
                         </div>
                     </div>
 
                     <div className="text-center mb-8">
-                        <h2 className="text-3xl font-black text-white tracking-tight mb-2">Welcome Back</h2>
-                        <p className="text-slate-400 text-sm font-medium uppercase tracking-widest">ETHREE POS</p>
+                        <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-2">Welcome Back</h2>
+                        <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">E4 POS</p>
                     </div>
 
                     {error && (
-                        <div className="bg-rose-500/10 text-rose-200 p-4 rounded-xl mb-6 text-sm text-center font-medium border border-rose-500/20 backdrop-blur-md">
+                        <div className="bg-rose-50 text-rose-600 p-4 rounded-xl mb-6 text-sm text-center font-medium border border-rose-100">
                             {error}
                         </div>
                     )}
 
                     <form onSubmit={handleLogin} className="space-y-5">
                         <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-slate-300 uppercase tracking-wider ml-1">Email Address</label>
+                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Email Address</label>
                             <input
                                 type="email"
                                 required
-                                className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700/50 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition-all text-white placeholder-slate-500"
+                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 outline-none transition-all text-slate-900 placeholder-slate-400 font-medium"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 placeholder="name@company.com"
@@ -82,11 +83,11 @@ export default function Login() {
                         </div>
 
                         <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-slate-300 uppercase tracking-wider ml-1">Password</label>
+                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Password</label>
                             <input
                                 type="password"
                                 required
-                                className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700/50 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition-all text-white placeholder-slate-500"
+                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 outline-none transition-all text-slate-900 placeholder-slate-400 font-medium"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 placeholder="••••••••"
@@ -96,14 +97,14 @@ export default function Login() {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-orange-900/20 disabled:opacity-50 disabled:cursor-not-allowed mt-4 active:scale-[0.98] text-lg"
+                            className="w-full bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-500 hover:to-violet-500 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-purple-900/20 disabled:opacity-50 disabled:cursor-not-allowed mt-4 active:scale-[0.98] text-sm"
                         >
                             {loading ? 'Authenticating...' : 'Sign In'}
                         </button>
                     </form>
                 </div>
-                <div className="bg-slate-950/30 p-4 text-center text-xs text-slate-500 border-t border-white/5 font-medium tracking-wide">
-                    Authorized Personnel Only • Secure System
+                <div className="bg-slate-50 p-4 text-center text-[10px] text-slate-400 border-t border-slate-100 font-semibold tracking-wide uppercase">
+                    Protected by E4 Security System
                 </div>
             </div>
         </div>

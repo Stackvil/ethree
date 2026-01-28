@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { Download, LogOut, RefreshCw, Receipt, Search, Trash2, AlertTriangle, BarChart3, List, Users } from 'lucide-react';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 
 interface User {
     _id: string;
@@ -43,8 +44,28 @@ export default function AdminDashboard() {
         try {
             const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
             const response = await axios.get(`${API_URL}/api/tickets`);
-            // Show all transactions (Cash + UPI) as requested for analytics
-            setTickets(response.data);
+
+            // Filter out Master Tickets that are purely for Combos (to avoid double counting)
+            // A Pure Combo Master has items with id '21' and is NOT a sub-ticket (no parentId check available on legacy, so check ID format)
+            // Legacy sub-tickets have ID format ending in -C<number>
+            const validTickets = response.data.filter((t: any) => {
+                // If ticket has items and ALL items are ID '21' (Combo)
+                const isComboMaster = t.items && t.items.length > 0 && t.items.every((i: any) => i.id === '21');
+
+                // If it's a combo master, we only want to keep it if it's actually a sub-ticket (which also has id '21' items).
+                // But sub-tickets usually have 'isCoupon' or 'parentId'. 
+                // If those fields are missing in legacy, we check if ID looks like a master (no -C suffix).
+
+                if (isComboMaster) {
+                    // Check if it is a Sub-Ticket (keep) or Master (discard)
+                    const isSubTicket = t.id.includes('-C') || t.isCoupon;
+                    return isSubTicket; // Keep only if it's a sub-ticket
+                }
+
+                return true; // Keep regular tickets
+            });
+
+            setTickets(validTickets);
         } catch (error) {
             console.error('Failed to fetch tickets', error);
         } finally {
@@ -213,6 +234,34 @@ export default function AdminDashboard() {
         }
     };
 
+    // Change Email State
+    const [showEmailModal, setShowEmailModal] = useState(false);
+    const [emailData, setEmailData] = useState({ currentEmail: '', newEmail: '' });
+    const [emailMessage, setEmailMessage] = useState('');
+
+    const handleChangeEmail = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setEmailMessage('');
+        try {
+            const token = localStorage.getItem('token');
+            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+            await axios.post(
+                `${API_URL}/api/auth/change-email`,
+                emailData,
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            setEmailMessage('Email updated successfully!');
+            fetchUsers(); // Refresh the users list
+            setTimeout(() => {
+                setShowEmailModal(false);
+                setEmailMessage('');
+                setEmailData({ currentEmail: '', newEmail: '' });
+            }, 1500);
+        } catch (error: any) {
+            setEmailMessage(error.response?.data?.message || 'Failed to update email');
+        }
+    };
+
     // Clear All Data State
     const [showClearModal, setShowClearModal] = useState(false);
     const [clearConfirmText, setClearConfirmText] = useState('');
@@ -235,47 +284,175 @@ export default function AdminDashboard() {
     return (
         <div className="min-h-screen bg-slate-100 font-sans text-slate-900">
             {/* Header */}
-            <header className="bg-slate-900 text-white shadow-xl sticky top-0 z-20 border-b border-white/10">
-                <div className="container mx-auto px-6 h-20 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
+            {/* Premium Sticky Header */}
+            <header className="bg-slate-900 border-b border-slate-800 text-white p-3 md:p-4 shadow-xl z-20 sticky top-0">
+                <div className="container mx-auto flex items-center justify-between">
+                    {/* Logo & Brand */}
+                    <div className="flex items-center gap-3 md:gap-4">
                         <div className="relative group">
-                            <div className="absolute -inset-1 bg-gradient-to-r from-amber-400 to-orange-600 rounded-lg blur opacity-25 group-hover:opacity-50 transition duration-200"></div>
+                            <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-cyan-300 rounded-lg blur opacity-50 group-hover:opacity-100 transition duration-200"></div>
                             <img
-                                src="/e3logo.jpeg"
-                                alt="Admin Logo"
-                                className="relative w-10 h-10 rounded-lg object-contain bg-white ring-2 ring-white/10"
+                                src="/E4LOGO.jpeg"
+                                alt="E4 Logo"
+                                className="relative w-10 h-10 md:w-12 md:h-12 rounded-lg object-contain bg-white ring-1 ring-slate-900"
                             />
                         </div>
                         <div>
-                            <h1 className="text-xl font-black tracking-tight leading-none text-white">ETHREE POS</h1>
-                            <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-0.5">Admin Dashboard</p>
+                            <h1 className="text-lg md:text-xl font-black tracking-tight text-white leading-none">EFOUR <span className="text-blue-400">ADMIN</span></h1>
+                            <p className="text-[10px] md:text-xs text-slate-400 font-medium tracking-wide hidden sm:block">SYSTEM MANAGEMENT CONSOLE</p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                        <button
-                            onClick={() => setShowPasswordModal(true)}
-                            className="text-sm font-semibold text-amber-400 hover:text-amber-300 transition-colors mr-2"
-                        >
-                            Change User Password
-                        </button>
-                        <div className="hidden md:flex flex-col items-end mr-2">
-                            <span className="text-sm font-bold text-slate-200">Administrator</span>
-                            <span className="text-xs text-slate-500 font-medium">System Access</span>
+
+                    <div className="flex items-center gap-2 md:gap-4">
+                        <div className="hidden md:flex items-center bg-slate-800/50 rounded-xl p-1 gap-1 border border-slate-700">
+                            <button
+                                onClick={() => setShowEmailModal(true)}
+                                className="px-3 py-1.5 text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-700 rounded-lg transition-all"
+                            >
+                                Change Email
+                            </button>
+                            <div className="w-px h-4 bg-slate-700"></div>
+                            <button
+                                onClick={() => setShowPasswordModal(true)}
+                                className="px-3 py-1.5 text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-700 rounded-lg transition-all"
+                            >
+                                Change Password
+                            </button>
                         </div>
+
+                        {/* Mobile Menu Trigger (Visible on small screens) */}
+                        <div className="md:hidden flex flex-col gap-1 items-end pr-2">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase">Admin</span>
+                        </div>
+
+                        <div className="h-6 md:h-8 w-px bg-slate-800 mx-0.5"></div>
+
                         <button
                             onClick={handleLogout}
-                            className="bg-slate-800 hover:bg-rose-600 text-white p-2.5 rounded-xl transition-all shadow-lg border border-slate-700 hover:border-rose-500 group"
+                            className="group relative p-2 md:px-3 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
                             title="Logout"
                         >
-                            <LogOut size={20} className="group-hover:-translate-x-0.5 transition-transform" />
+                            <LogOut size={20} className="relative z-10" />
                         </button>
                     </div>
                 </div>
+
+                {/* Mobile Sub-Header for Actions */}
+                <div className="md:hidden border-t border-slate-800 mt-2 pt-2 flex justify-end gap-2 px-1">
+                    <button
+                        onClick={() => setShowEmailModal(true)}
+                        className="text-[10px] font-bold text-slate-400 hover:text-white uppercase tracking-wider bg-slate-800/50 px-2 py-1.5 rounded border border-slate-700"
+                    >
+                        Change Email
+                    </button>
+                    <button
+                        onClick={() => setShowPasswordModal(true)}
+                        className="text-[10px] font-bold text-slate-400 hover:text-white uppercase tracking-wider bg-slate-800/50 px-2 py-1'5 rounded border border-slate-700"
+                    >
+                        Change Pwd
+                    </button>
+                </div>
             </header>
 
-            <main className="container mx-auto p-6 max-w-7xl">
+            <main className="container mx-auto p-4 md:p-6 max-w-7xl">
                 {/* Stats Grid */}
-                {/* ... existing stats ... */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    {/* Total Revenue */}
+                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="p-3 bg-emerald-100 text-emerald-600 rounded-xl">
+                                <BarChart3 size={24} />
+                            </div>
+                            <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg uppercase tracking-wider">TOTAL</span>
+                        </div>
+                        <div className="space-y-1">
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Total Revenue</p>
+                            <h3 className="text-3xl font-black text-slate-900">₹{totalRevenue.toLocaleString()}</h3>
+                        </div>
+                    </div>
+
+                    {/* Total Tickets */}
+                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="p-3 bg-blue-100 text-blue-600 rounded-xl">
+                                <Receipt size={24} />
+                            </div>
+                            <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-lg uppercase tracking-wider">LIFETIME</span>
+                        </div>
+                        <div className="space-y-1">
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Tickets Sold</p>
+                            <h3 className="text-3xl font-black text-slate-900">{tickets.length.toLocaleString()}</h3>
+                        </div>
+                    </div>
+
+                    {/* Active Systems */}
+                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="p-3 bg-amber-100 text-amber-600 rounded-xl">
+                                <Users size={24} />
+                            </div>
+                            <span className="text-xs font-bold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-lg uppercase tracking-wider">SYSTEMS</span>
+                        </div>
+                        <div className="space-y-1">
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Active Users</p>
+                            <h3 className="text-3xl font-black text-slate-900">{users.length}</h3>
+                        </div>
+                    </div>
+                </div>
+                {/* Email Modal */}
+                {showEmailModal && (
+                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm border border-slate-200 animate-in fade-in zoom-in duration-200">
+                            <h2 className="text-xl font-bold text-slate-800 mb-4">Change User Email</h2>
+
+                            {emailMessage && (
+                                <div className={`p-3 rounded-lg text-sm font-medium mb-4 ${emailMessage.includes('success') ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                                    {emailMessage}
+                                </div>
+                            )}
+
+                            <form onSubmit={handleChangeEmail} className="space-y-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Current Email</label>
+                                    <input
+                                        type="email"
+                                        required
+                                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                        placeholder="old@ethree.com"
+                                        value={emailData.currentEmail}
+                                        onChange={(e) => setEmailData({ ...emailData, currentEmail: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">New Email</label>
+                                    <input
+                                        type="email"
+                                        required
+                                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                        placeholder="new@ethree.com"
+                                        value={emailData.newEmail}
+                                        onChange={(e) => setEmailData({ ...emailData, newEmail: e.target.value })}
+                                    />
+                                </div>
+                                <div className="flex gap-3 mt-6">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowEmailModal(false)}
+                                        className="flex-1 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        className="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20"
+                                    >
+                                        Update
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
 
                 {/* Password Modal */}
                 {showPasswordModal && (
@@ -381,49 +558,50 @@ export default function AdminDashboard() {
                 )}
 
                 {/* View Switcher & Toolbar */}
-                <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-8 bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
-                    <div className="flex bg-slate-100 p-1.5 rounded-xl w-full md:w-auto">
+                {/* View Switcher & Toolbar */}
+                <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 bg-white p-3 rounded-2xl shadow-sm border border-slate-200">
+                    <div className="grid grid-cols-3 md:flex bg-slate-100 p-1 rounded-xl w-full md:w-auto gap-1">
                         <button
                             onClick={() => setView('transactions')}
-                            className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg font-bold transition-all ${view === 'transactions' ? 'bg-white text-blue-600 shadow-md ring-1 ring-slate-200' : 'text-slate-500 hover:text-slate-700'}`}
+                            className={`flex items-center justify-center gap-1.5 px-2 py-2 md:px-6 md:py-2.5 rounded-lg font-bold text-[10px] md:text-sm transition-all ${view === 'transactions' ? 'bg-white text-blue-600 shadow-md ring-1 ring-slate-200' : 'text-slate-500 hover:text-slate-700'}`}
                         >
-                            <List size={18} />
+                            <List size={14} className="md:w-4 md:h-4" />
                             <span>Transactions</span>
                         </button>
                         <button
                             onClick={() => setView('analytics')}
-                            className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg font-bold transition-all ${view === 'analytics' ? 'bg-white text-blue-600 shadow-md ring-1 ring-slate-200' : 'text-slate-500 hover:text-slate-700'}`}
+                            className={`flex items-center justify-center gap-1.5 px-2 py-2 md:px-6 md:py-2.5 rounded-lg font-bold text-[10px] md:text-sm transition-all ${view === 'analytics' ? 'bg-white text-blue-600 shadow-md ring-1 ring-slate-200' : 'text-slate-500 hover:text-slate-700'}`}
                         >
-                            <BarChart3 size={18} />
+                            <BarChart3 size={14} className="md:w-4 md:h-4" />
                             <span>Analytics</span>
                         </button>
                         <button
                             onClick={() => setView('users')}
-                            className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg font-bold transition-all ${view === 'users' ? 'bg-white text-blue-600 shadow-md ring-1 ring-slate-200' : 'text-slate-500 hover:text-slate-700'}`}
+                            className={`flex items-center justify-center gap-1.5 px-2 py-2 md:px-6 md:py-2.5 rounded-lg font-bold text-[10px] md:text-sm transition-all ${view === 'users' ? 'bg-white text-blue-600 shadow-md ring-1 ring-slate-200' : 'text-slate-500 hover:text-slate-700'}`}
                         >
-                            <Users size={18} />
+                            <Users size={14} className="md:w-4 md:h-4" />
                             <span>Users</span>
                         </button>
                     </div>
 
-                    <div className="flex flex-wrap gap-3 items-center justify-center md:justify-end w-full md:w-auto">
+                    <div className="flex flex-col sm:flex-row gap-3 items-center justify-end w-full md:w-auto">
                         {(view === 'transactions' || view === 'users') && (
-                            <div className="relative w-full md:w-72">
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                            <div className="relative w-full sm:w-64 md:w-72">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                                 <input
                                     type="text"
-                                    placeholder={view === 'transactions' ? "Search ID or Mobile..." : "Search Name or Email..."}
-                                    className="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 outline-none font-medium"
+                                    placeholder={view === 'transactions' ? "Search ID or Mobile..." : "Search Name..."}
+                                    className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 outline-none font-medium text-sm"
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
                             </div>
                         )}
 
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 w-full sm:w-auto justify-end">
                             <button
                                 onClick={fetchTickets}
-                                className="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-600 font-bold transition-all shadow-sm active:scale-95"
+                                className="p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-600 transition-all shadow-sm flex-none"
                                 title="Refresh Data"
                             >
                                 <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
@@ -431,18 +609,18 @@ export default function AdminDashboard() {
 
                             <button
                                 onClick={view === 'transactions' ? downloadCSV : downloadAnalyticsCSV}
-                                className="flex items-center gap-2 px-4 py-2.5 bg-slate-900 text-white rounded-xl hover:bg-slate-800 font-bold transition-all shadow-md active:scale-95"
+                                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2 bg-slate-900 text-white rounded-xl hover:bg-slate-800 font-bold text-xs md:text-sm transition-all shadow-md"
                             >
-                                <Download size={18} />
-                                <span className="hidden sm:inline">{view === 'transactions' ? 'All Transactions' : '7-Day Report'}</span>
+                                <Download size={16} />
+                                <span className={view === 'transactions' ? "hidden xl:inline" : ""}>{view === 'transactions' ? 'Export' : 'Report'}</span>
                             </button>
 
                             <button
                                 onClick={() => navigate('/accounts')}
-                                className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-bold transition-all shadow-md active:scale-95"
+                                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-bold text-xs md:text-sm transition-all shadow-md"
                             >
-                                <Receipt size={18} />
-                                <span className="hidden sm:inline">Accounts</span>
+                                <Receipt size={16} />
+                                <span className="hidden xl:inline">Accounts</span>
                             </button>
 
                             <button
@@ -557,49 +735,128 @@ export default function AdminDashboard() {
                             </table>
                         </div>
                     ) : view === 'analytics' ? (
-                        <div className="overflow-x-auto">
-                            {/* Analytics content ... */}
-                            <table className="w-full text-left border-collapse">
-                                <thead>
-                                    <tr className="bg-slate-50/50 border-b border-slate-200">
-                                        <th className="px-6 py-5 text-xs font-extrabold text-slate-500 uppercase tracking-wider">Date</th>
-                                        <th className="px-6 py-5 text-xs font-extrabold text-slate-500 uppercase tracking-wider text-center">Tickets Sold</th>
-                                        <th className="px-6 py-5 text-xs font-extrabold text-slate-500 uppercase tracking-wider text-right">Cash Revenue</th>
-                                        <th className="px-6 py-5 text-xs font-extrabold text-slate-500 uppercase tracking-wider text-right">UPI Revenue</th>
-                                        <th className="px-6 py-5 text-xs font-extrabold text-slate-500 uppercase tracking-wider text-right">Daily Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100">
-                                    {getAnalyticsData().map((day) => (
-                                        <tr key={day.date} className="hover:bg-slate-50/80 transition-colors">
-                                            <td className="px-6 py-4">
-                                                <span className="font-bold text-slate-700">{new Date(day.date).toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short' })}</span>
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                <span className="font-black text-slate-600">{day.count}</span>
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <span className="text-amber-600 font-bold">₹{day.cash.toLocaleString()}</span>
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <span className="text-blue-600 font-bold">₹{day.upi.toLocaleString()}</span>
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <div className="flex flex-col items-end gap-1">
-                                                    <span className="text-emerald-600 font-black text-lg leading-none">₹{day.revenue.toLocaleString()}</span>
-                                                    <button
-                                                        onClick={() => downloadDailyReport(day)}
-                                                        className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-blue-600 bg-slate-50 hover:bg-white px-2 py-0.5 rounded border border-transparent hover:border-blue-100 transition-all"
-                                                    >
-                                                        <Download size={10} />
-                                                        Export Day
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                        <div className="space-y-6">
+                            {/* Analytics Header Cards */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                {/* Total Revenue Card */}
+                                <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-6 text-white shadow-xl shadow-slate-200/50 relative overflow-hidden group">
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-2xl group-hover:bg-white/10 transition-all duration-500"></div>
+                                    <div className="relative z-10">
+                                        <div className="flex items-center gap-3 mb-2 text-slate-400">
+                                            <div className="p-2 bg-white/10 rounded-lg">
+                                                <BarChart3 size={18} className="text-emerald-400" />
+                                            </div>
+                                            <span className="text-xs font-bold uppercase tracking-widest">Total Revenue (7 Days)</span>
+                                        </div>
+                                        <div className="text-4xl font-black tracking-tight text-white mb-1">
+                                            ₹{tickets.reduce((sum, t) => sum + t.amount, 0).toLocaleString()}
+                                        </div>
+                                        <div className="text-xs font-medium text-slate-400">
+                                            {tickets.length} total tickets processed
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Pie Chart Card */}
+                                <div className="md:col-span-2 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex items-center justify-between">
+                                    <div className="flex flex-col justify-center">
+                                        <h3 className="text-lg font-bold text-slate-800 mb-1">Payment Distribution</h3>
+                                        <p className="text-sm text-slate-500 font-medium mb-6">Cash vs UPI Split</p>
+                                        <div className="space-y-3">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-3 h-3 rounded-full bg-amber-500"></div>
+                                                <span className="text-sm font-bold text-slate-600">Cash:</span>
+                                                <span className="text-sm font-black text-slate-900">
+                                                    ₹{tickets.filter(t => !t.paymentMode || t.paymentMode === 'cash').reduce((sum, t) => sum + t.amount, 0).toLocaleString()}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-3 h-3 rounded-full bg-blue-600"></div>
+                                                <span className="text-sm font-bold text-slate-600">UPI:</span>
+                                                <span className="text-sm font-black text-slate-900">
+                                                    ₹{tickets.filter(t => t.paymentMode === 'upi').reduce((sum, t) => sum + t.amount, 0).toLocaleString()}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="w-64 h-48">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <PieChart>
+                                                <Pie
+                                                    data={[
+                                                        { name: 'Cash', value: tickets.filter(t => !t.paymentMode || t.paymentMode === 'cash').reduce((sum, t) => sum + t.amount, 0) },
+                                                        { name: 'UPI', value: tickets.filter(t => t.paymentMode === 'upi').reduce((sum, t) => sum + t.amount, 0) }
+                                                    ]}
+                                                    cx="50%"
+                                                    cy="50%"
+                                                    innerRadius={40}
+                                                    outerRadius={70}
+                                                    paddingAngle={5}
+                                                    dataKey="value"
+                                                >
+                                                    <Cell key="cell-0" fill="#f59e0b" />
+                                                    <Cell key="cell-1" fill="#2563eb" />
+                                                </Pie>
+                                                <Tooltip
+                                                    formatter={(value: any) => [`₹${Number(value).toLocaleString()}`, 'Revenue']}
+                                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                                                />
+                                                <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '12px' }} />
+                                            </PieChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Daily Breakdown Table */}
+                            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                                <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                                    <h3 className="text-sm font-black text-slate-700 uppercase tracking-wider">Daily Breakdown</h3>
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr className="bg-slate-50/50 border-b border-slate-200">
+                                                <th className="px-6 py-5 text-xs font-extrabold text-slate-500 uppercase tracking-wider">Date</th>
+                                                <th className="px-6 py-5 text-xs font-extrabold text-slate-500 uppercase tracking-wider text-center">Tickets Sold</th>
+                                                <th className="px-6 py-5 text-xs font-extrabold text-slate-500 uppercase tracking-wider text-right">Cash Revenue</th>
+                                                <th className="px-6 py-5 text-xs font-extrabold text-slate-500 uppercase tracking-wider text-right">UPI Revenue</th>
+                                                <th className="px-6 py-5 text-xs font-extrabold text-slate-500 uppercase tracking-wider text-right">Daily Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                            {getAnalyticsData().map((day) => (
+                                                <tr key={day.date} className="hover:bg-slate-50/80 transition-colors">
+                                                    <td className="px-6 py-4">
+                                                        <span className="font-bold text-slate-700">{new Date(day.date).toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short' })}</span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        <span className="font-black text-slate-600">{day.count}</span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <span className="text-amber-600 font-bold">₹{day.cash.toLocaleString()}</span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <span className="text-blue-600 font-bold">₹{day.upi.toLocaleString()}</span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <div className="flex flex-col items-end gap-1">
+                                                            <span className="text-emerald-600 font-black text-lg leading-none">₹{day.revenue.toLocaleString()}</span>
+                                                            <button
+                                                                onClick={() => downloadDailyReport(day)}
+                                                                className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-blue-600 bg-slate-50 hover:bg-white px-2 py-0.5 rounded border border-transparent hover:border-blue-100 transition-all"
+                                                            >
+                                                                <Download size={10} />
+                                                                Export Day
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
                     ) : (
                         <div className="overflow-x-auto">

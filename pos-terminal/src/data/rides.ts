@@ -103,6 +103,6 @@ export const rides: Ride[] = [
         name: 'Combo Ticket (5 Rides)',
         price: 500,
         description: 'Special Pass: Any 5 rides of your choice!',
-        image: '/e3logo.jpeg'
+        image: '/E4LOGO.jpeg'
     }
 ];

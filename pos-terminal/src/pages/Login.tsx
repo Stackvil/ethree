@@ -42,7 +42,7 @@ export default function Login() {
     return (
         <div className="min-h-screen bg-[#a855f7] flex items-center justify-center p-4 relative overflow-hidden">
             {/* Background Image */}
-            <div className="absolute inset-0 bg-[url('/blur-background-vibrant-ferris-wheel-600nw-2588560711.webp')] bg-cover bg-center"></div>
+            <div className="absolute inset-0 bg-[url('./blur-background-vibrant-ferris-wheel-600nw-2588560711.webp')] bg-cover bg-center"></div>
             <div className="absolute inset-0 bg-gradient-to-br from-purple-900/40 to-slate-900/60 backdrop-blur-[2px]"></div>
 
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-white/20 relative z-10 animate-in fade-in zoom-in duration-500">
@@ -51,7 +51,7 @@ export default function Login() {
                         <div className="relative group">
                             <div className="absolute -inset-0.5 bg-gradient-to-r from-amber-500 to-amber-300 rounded-2xl blur opacity-30 group-hover:opacity-50 transition duration-200"></div>
                             <img
-                                src="/E4LOGO.jpeg"
+                                src="E4LOGO.jpeg"
                                 alt="E4 Logo"
                                 className="relative w-24 h-24 rounded-2xl object-contain bg-white shadow-sm ring-1 ring-slate-100"
                             />

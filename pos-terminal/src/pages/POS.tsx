@@ -390,7 +390,7 @@ export default function POS() {
                             <div className="relative group">
                                 <div className="absolute -inset-0.5 bg-gradient-to-r from-amber-500 to-amber-300 rounded-lg blur opacity-50 group-hover:opacity-100 transition duration-200"></div>
                                 <img
-                                    src="/E4LOGO.jpeg"
+                                    src="E4LOGO.jpeg"
                                     alt="E4 Logo"
                                     className="relative w-10 h-10 md:w-12 md:h-12 rounded-lg object-contain bg-white ring-1 ring-slate-900"
                                 />

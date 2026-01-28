@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 // Main App Component
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import axios from 'axios';
 import POS from './pages/POS';
 import Login from './pages/Login';
 import VerifyTicket from './pages/VerifyTicket';
@@ -28,6 +29,29 @@ function PrivateRoute({ children, role }: { children: React.ReactNode, role?: st
 }
 
 function App() {
+  // Setup Global Axios Interceptor for Token Expiration (Auto Logout)
+  useEffect(() => {
+    const interceptor = axios.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+          // If 401 Unauthorized or 403 Forbidden (specifically for token issues), logout
+          // But be careful not to loop if login itself fails with 400
+          if (!window.location.hash.includes('/login')) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.hash = '#/login';
+          }
+        }
+        return Promise.reject(error);
+      }
+    );
+
+    return () => {
+      axios.interceptors.response.eject(interceptor);
+    };
+  }, []);
+
   return (
     <Router>
       <Routes>

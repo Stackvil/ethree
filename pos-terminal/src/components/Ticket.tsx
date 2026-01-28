@@ -62,9 +62,9 @@ export const Ticket = forwardRef<HTMLDivElement, TicketProps & { subTickets?: an
 
                     <div className="flex-1 flex flex-col justify-center border-y-2 border-dashed border-black/20 py-0.5">
                         {isCoupon ? (
-                            <div className="bg-black text-white px-2 py-2">
+                            <div className="border-4 border-black text-black px-2 py-2">
                                 <span className="font-black leading-none uppercase block" style={{ fontSize: '26pt' }}>ANY RIDE</span>
-                                <span className="font-bold uppercase block mt-1 border-t border-white/30 pt-1" style={{ fontSize: '8pt' }}>PASS • PARADISE RESORT</span>
+                                <span className="font-bold uppercase block mt-1 border-t-2 border-black pt-1" style={{ fontSize: '8pt' }}>PASS • PARADISE RESORT</span>
                             </div>
                         ) : (
                             <div className="space-y-0.5 text-left px-1">

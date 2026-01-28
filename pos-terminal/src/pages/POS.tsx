@@ -131,6 +131,15 @@ export default function POS() {
 
     const syncOfflineTickets = async () => {
         setIsSyncing(true);
+        const stored = localStorage.getItem('pending_tickets') || '[]';
+        let pending: any[];
+
+        try {
+            pending = JSON.parse(stored);
+        } catch (e) {
+            pending = [];
+        }
+
         if (!Array.isArray(pending)) {
             console.error('Pending tickets is not an array, resetting.');
             localStorage.setItem('pending_tickets', '[]');
@@ -430,8 +439,8 @@ export default function POS() {
 
                             {/* User Info */}
                             <div className="hidden lg:flex flex-col border-l border-slate-700 pl-4 ml-2">
-                                <span className="text-xs font-black text-white uppercase tracking-wider">{loggedUser.name || 'Staff'}</span>
-                                <span className="text-[10px] font-bold text-amber-500/80 uppercase tracking-widest">{loggedUser.role || 'POS Terminal'}</span>
+                                <span className="text-[10px] font-black text-amber-500/80 uppercase tracking-widest leading-none mb-1">Authenticated Email</span>
+                                <span className="text-xs font-bold text-white tracking-wide">{loggedUser.email || 'staff@company.com'}</span>
                             </div>
 
                             {/* Status Indicators (Mobile Optimized) */}

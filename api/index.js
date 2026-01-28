@@ -13,6 +13,55 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Mock DB Initializer log
+const mongoose = require('mongoose');
+
+// Database Connection (Cached for Serverless)
+let cached = global.mongoose;
+
+if (!cached) {
+    cached = global.mongoose = { conn: null, promise: null };
+}
+
+const connectDB = async () => {
+    if (cached.conn) {
+        return cached.conn;
+    }
+
+    if (!cached.promise) {
+        const opts = {
+            bufferCommands: false,
+            serverSelectionTimeoutMS: 5000,
+            socketTimeoutMS: 45000,
+        };
+
+        cached.promise = mongoose.connect(process.env.MONGO_URI || process.env.MONGODB_URI, opts).then((mongoose) => {
+            console.log(' New MongoDB Connection Established');
+            return mongoose;
+        });
+    }
+
+    try {
+        cached.conn = await cached.promise;
+    } catch (e) {
+        cached.promise = null;
+        throw e;
+    }
+
+    return cached.conn;
+};
+
+// Ensure DB is connected for every request in serverless environment
+app.use(async (req, res, next) => {
+    try {
+        await connectDB();
+        next();
+    } catch (error) {
+        console.error('Database Connection Failed:', error);
+        res.status(500).json({ error: 'Database Connection Failed' });
+    }
+});
+
 // Import Routes from the server directory
 const authRoutes = require('../server/routes/auth');
 const productRoutes = require('../server/routes/products');

@@ -5,6 +5,7 @@ import POS from './pages/POS';
 import Login from './pages/Login';
 import VerifyTicket from './pages/VerifyTicket';
 import AdminDashboard from './pages/AdminDashboard';
+import Accounts from './pages/Accounts';
 
 function PrivateRoute({ children, role }: { children: React.ReactNode, role?: string }) {
   const token = localStorage.getItem('token');
@@ -52,6 +53,14 @@ function App() {
           element={
             <PrivateRoute role="admin">
               <AdminDashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/accounts"
+          element={
+            <PrivateRoute role="admin">
+              <Accounts />
             </PrivateRoute>
           }
         />

@@ -16,11 +16,11 @@ export default function POS() {
     const [cart, setCart] = useState<CartItem[]>([]);
     // currentTicketId and currentTicketDate removed as they were unused state
     const [mobileNumber, setMobileNumber] = useState('');
-    const [showCheckoutModal, setShowCheckoutModal] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [showMobileCart, setShowMobileCart] = useState(false);
     const [loyaltyPoints, setLoyaltyPoints] = useState<number | null>(null);
     const [loadingPoints, setLoadingPoints] = useState(false);
+    const [paymentMode, setPaymentMode] = useState<'cash' | 'upi' | null>(null);
 
     // State to hold the ticket currently being printed/reprinted
     const [printData, setPrintData] = useState<{
@@ -29,6 +29,7 @@ export default function POS() {
         date: string;
         id: string;
         mobile: string;
+        paymentMode?: string;
         subTickets?: any[];
         skipMaster?: boolean;
         earnedPoints?: number;
@@ -166,10 +167,6 @@ export default function POS() {
     const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const totalWithTax = total; // Tax removed
 
-    const handlePrintClick = () => {
-        setMobileNumber(''); // Reset mobile number
-        setShowCheckoutModal(true);
-    };
 
     const confirmPrint = async () => {
         // Generate Ticket ID
@@ -185,6 +182,7 @@ export default function POS() {
             items: cart,
             status: 'valid',
             mobile: mobileNumber,
+            paymentMode: (paymentMode || 'cash') as 'cash' | 'upi',
             createdAt: new Date().toISOString()
         };
 
@@ -204,6 +202,7 @@ export default function POS() {
                         items: [{ ...item, quantity: 1, name: 'ANY RIDE', price: 100 }], // Rename for coupon
                         status: 'valid',
                         mobile: mobileNumber,
+                        paymentMode: (paymentMode || 'cash') as 'cash' | 'upi',
                         createdAt: new Date().toISOString(),
                         isCoupon: true,
                         parentId: ticketId
@@ -228,6 +227,7 @@ export default function POS() {
             date: date,
             id: ticketId,
             mobile: mobileNumber,
+            paymentMode: paymentMode as string | undefined,
             subTickets: subTickets, // Pass sub-tickets for printing
             skipMaster: onlyCombos && subTickets.length > 0, // Skip master if only combos
             earnedPoints: mobileNumber ? (Math.floor(totalWithTax / 100) * 10) : 0
@@ -287,7 +287,7 @@ export default function POS() {
             setPendingCount(prev => prev + ticketsToSave.length);
         }
 
-        setShowCheckoutModal(false);
+        // setShowCheckoutModal(false); // Modal removed
 
         // Wait for state update then print
         setTimeout(() => {
@@ -295,7 +295,8 @@ export default function POS() {
             // Show success message after print dialog loop
             setShowSuccessModal(true);
             setCart([]); // Clear cart here after successful print flow
-        }, 100);
+            setPaymentMode(null); // Reset payment mode to null to hide print button
+        }, 500);
     };
 
     const handleReprint = async () => {
@@ -312,6 +313,7 @@ export default function POS() {
             date: date,
             items: printData.items,
             mobile: printData.mobile,
+            paymentMode: (printData.paymentMode || 'cash') as 'cash' | 'upi',
             status: 'valid',
             createdAt: new Date().toISOString()
         };
@@ -448,7 +450,15 @@ export default function POS() {
                             items={cart}
                             onUpdateQuantity={updateQuantitySimple}
                             onClear={clearCart}
-                            onPrint={handlePrintClick}
+                            onPrint={confirmPrint}
+                            paymentMode={paymentMode}
+                            onPaymentModeChange={setPaymentMode}
+                            mobileNumber={mobileNumber}
+                            onMobileNumberChange={setMobileNumber}
+                            loyaltyPoints={loyaltyPoints}
+                            loadingPoints={loadingPoints}
+                            onAddReward={addRewardToCart}
+                            hasReward={!!cart.find(i => i.id === 'reward-1')}
                         />
                     </div>
                 </main>
@@ -488,93 +498,24 @@ export default function POS() {
                                 items={cart}
                                 onUpdateQuantity={updateQuantitySimple}
                                 onClear={clearCart}
-                                onPrint={handlePrintClick}
+                                onPrint={confirmPrint}
+                                paymentMode={paymentMode}
+                                onPaymentModeChange={setPaymentMode}
+                                mobileNumber={mobileNumber}
+                                onMobileNumberChange={setMobileNumber}
+                                loyaltyPoints={loyaltyPoints}
+                                loadingPoints={loadingPoints}
+                                onAddReward={addRewardToCart}
+                                hasReward={!!cart.find(i => i.id === 'reward-1')}
                             />
                         </div>
                     </div>
                 )}
             </div>
 
-            {/* Checkout Modal */}
-            {showCheckoutModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md">
-                        <h2 className="text-xl font-bold text-slate-900 mb-4">Checkout</h2>
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">
-                                    Customer Mobile Number <span className="text-slate-400 font-normal">(Optional)</span>
-                                </label>
-                                <input
-                                    type="tel"
-                                    placeholder="Enter 10-digit number"
-                                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                                    value={mobileNumber}
-                                    onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                                />
-                            </div>
-
-                            {/* Loyalty UI */}
-                            {mobileNumber.length === 10 && (
-                                <div className="mt-2 p-3 bg-indigo-50 border border-indigo-100 rounded-lg animate-in fade-in slide-in-from-top-2">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-sm font-bold text-indigo-900">Loyalty Points</span>
-                                        {loadingPoints ? (
-                                            <RefreshCw size={14} className="animate-spin text-indigo-500" />
-                                        ) : (
-                                            <span className="text-lg font-black text-indigo-600">{loyaltyPoints !== null ? loyaltyPoints : 0}</span>
-                                        )}
-                                    </div>
-                                    {(loyaltyPoints || 0) >= 100 && !cart.find(i => i.id === 'reward-1') && (
-                                        <button
-                                            onClick={addRewardToCart}
-                                            className="w-full mt-2 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded shadow-sm transition-colors flex items-center justify-center gap-1"
-                                        >
-                                            <span>🎁 Redeem 1 Free Ride (100 Pts)</span>
-                                        </button>
-                                    )}
-                                    {cart.find(i => i.id === 'reward-1') && (
-                                        <div className="mt-2 text-xs text-emerald-600 font-bold text-center bg-emerald-100 p-1 rounded">
-                                            Reward Applied! (-100 Pts)
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                        </div>
-
-                        <div className="bg-slate-50 p-4 rounded-lg space-y-2">
-                            <div className="flex justify-between text-sm text-slate-600">
-                                <span>Total Items</span>
-                                <span>{cart.reduce((sum, item) => sum + item.quantity, 0)}</span>
-                            </div>
-                            <div className="flex justify-between font-bold text-lg text-slate-900 pt-2 border-t border-slate-200">
-                                <span>Total Amount</span>
-                                <span>₹{totalWithTax}</span>
-                            </div>
-                        </div>
-
-                        <div className="flex gap-3 pt-2">
-                            <button
-                                onClick={() => setShowCheckoutModal(false)}
-                                className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 font-medium rounded-lg hover:bg-slate-50 transition-colors"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={confirmPrint}
-                                className="flex-1 px-4 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20"
-                            >
-                                Confirm & Print
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Print Layout - Only visible when printing */}
-            <div className="hidden print:block absolute top-0 left-0 w-full h-full bg-white z-[9999]">
-                <div className="flex items-center justify-center p-0">
+            {/* Print Layout - Managed by visibility rules in Ticket.tsx */}
+            <div className="hidden print:block print-container" style={{ width: '3in' }}>
+                <div className="p-0">
                     <Ticket
                         ref={ticketRef}
                         items={printData?.items || []}
@@ -591,7 +532,7 @@ export default function POS() {
 
             {/* Success Modal */}
             {showSuccessModal && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4 print:hidden">
                     <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-sm text-center animate-in fade-in zoom-in duration-300 ring-1 ring-slate-900/5">
                         <div className="mx-auto bg-emerald-100 p-4 rounded-full w-20 h-20 flex items-center justify-center mb-6 shadow-inner">
                             <TicketIcon className="w-10 h-10 text-emerald-600" />

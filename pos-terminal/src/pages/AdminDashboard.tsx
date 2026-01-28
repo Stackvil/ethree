@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { Download, LogOut, RefreshCw, Receipt, Search } from 'lucide-react';
+import { Download, LogOut, RefreshCw, Receipt, Search, Trash2, AlertTriangle, BarChart3, List } from 'lucide-react';
 
 interface Ticket {
     _id: string;
@@ -9,6 +9,7 @@ interface Ticket {
     amount: number;
     date: string;
     mobile?: string;
+    paymentMode?: string;
     createdAt: string;
     items: any[];
 }
@@ -17,6 +18,7 @@ export default function AdminDashboard() {
     const [tickets, setTickets] = useState<Ticket[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [view, setView] = useState<'transactions' | 'analytics'>('transactions');
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -28,6 +30,7 @@ export default function AdminDashboard() {
         try {
             const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
             const response = await axios.get(`${API_URL}/api/tickets`);
+            // Show all transactions (Cash + UPI) as requested for analytics
             setTickets(response.data);
         } catch (error) {
             console.error('Failed to fetch tickets', error);
@@ -45,7 +48,7 @@ export default function AdminDashboard() {
     const downloadCSV = () => {
         if (tickets.length === 0) return;
 
-        const headers = ['Ticket ID', 'Date', 'Amount', 'Mobile', 'Created At'];
+        const headers = ['Ticket ID', 'Date', 'Amount', 'Mobile', 'Payment Mode', 'Created At'];
         const csvContent = [
             headers.join(','),
             ...tickets.map(t => [
@@ -53,6 +56,7 @@ export default function AdminDashboard() {
                 `"${t.date}"`,
                 t.amount,
                 t.mobile || '',
+                t.paymentMode?.toLowerCase() || 'cash',
                 t.createdAt
             ].join(','))
         ].join('\n');
@@ -68,16 +72,61 @@ export default function AdminDashboard() {
         document.body.removeChild(link);
     };
 
+    const downloadAnalyticsCSV = () => {
+        const data = getAnalyticsData();
+        const headers = ['Date', 'Total Tickets', 'Total Revenue', 'Cash Revenue', 'UPI Revenue'];
+        const csvContent = [
+            headers.join(','),
+            ...data.map(d => [
+                d.date,
+                d.count,
+                d.revenue,
+                d.cash,
+                d.upi
+            ].join(','))
+        ].join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `daily_analytics_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     // Derived Stats
     const totalRevenue = tickets.reduce((sum, t) => sum + t.amount, 0);
 
-    // Filtered Tickets
     // Filtered Tickets
     const filteredTickets = tickets.filter(t => {
         const idMatch = t.id ? t.id.toLowerCase().includes(searchTerm.toLowerCase()) : false;
         const mobileMatch = t.mobile ? t.mobile.includes(searchTerm) : false;
         return idMatch || mobileMatch;
     });
+
+    const getAnalyticsData = () => {
+        const last7Days = [...Array(7)].map((_, i) => {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            return d.toISOString().split('T')[0];
+        });
+
+        const aggregation = last7Days.map(date => {
+            const dailyTickets = tickets.filter(t => new Date(t.createdAt).toISOString().split('T')[0] === date);
+            return {
+                date,
+                count: dailyTickets.length,
+                revenue: dailyTickets.reduce((sum, t) => sum + t.amount, 0),
+                cash: dailyTickets.filter(t => !t.paymentMode || t.paymentMode.toLowerCase() === 'cash').reduce((sum, t) => sum + t.amount, 0),
+                upi: dailyTickets.filter(t => t.paymentMode?.toLowerCase() === 'upi').reduce((sum, t) => sum + t.amount, 0),
+            };
+        });
+
+        return aggregation;
+    };
 
     // Change Password State
     const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -103,6 +152,25 @@ export default function AdminDashboard() {
             }, 1500);
         } catch (error: any) {
             setPasswordMessage(error.response?.data?.message || 'Failed to update password');
+        }
+    };
+
+    // Clear All Data State
+    const [showClearModal, setShowClearModal] = useState(false);
+    const [clearConfirmText, setClearConfirmText] = useState('');
+
+    const handleClearAll = async () => {
+        if (clearConfirmText !== 'DELETE ALL') return;
+
+        try {
+            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+            await axios.delete(`${API_URL}/api/tickets/clear-all`);
+            fetchTickets();
+            setShowClearModal(false);
+            setClearConfirmText('');
+        } catch (error) {
+            console.error('Failed to clear tickets', error);
+            alert('Failed to clear tickets');
         }
     };
 
@@ -206,113 +274,241 @@ export default function AdminDashboard() {
                     </div>
                 )}
 
-                {/* Toolbar */}
-                <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
-                    <div className="relative w-full md:w-96 group">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={20} />
-                        <input
-                            type="text"
-                            placeholder="Search by Ticket ID or Mobile..."
-                            className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium text-slate-700 shadow-sm"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
+                {/* Clear Data Modal */}
+                {showClearModal && (
+                    <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+                        <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md border border-slate-200 animate-in fade-in zoom-in duration-300">
+                            <div className="w-20 h-20 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <AlertTriangle size={40} className="text-rose-600" />
+                            </div>
+
+                            <h2 className="text-2xl font-black text-slate-800 text-center mb-2">Clear All Records?</h2>
+                            <p className="text-slate-500 text-center mb-8 font-medium">
+                                This action will <span className="text-rose-600 font-bold underline">delete all bills and tickets</span> forever. This cannot be undone.
+                            </p>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-xs font-black text-slate-400 uppercase mb-2 tracking-widest text-center">Type <span className="text-slate-900">DELETE ALL</span> to confirm</label>
+                                    <input
+                                        type="text"
+                                        className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:ring-4 focus:ring-rose-500/10 focus:border-rose-500 outline-none text-center font-black uppercase tracking-widest transition-all"
+                                        placeholder="Type here..."
+                                        value={clearConfirmText}
+                                        onChange={(e) => setClearConfirmText(e.target.value)}
+                                    />
+                                </div>
+
+                                <div className="flex gap-4 pt-4">
+                                    <button
+                                        onClick={() => { setShowClearModal(false); setClearConfirmText(''); }}
+                                        className="flex-1 py-4 bg-slate-100 text-slate-600 font-bold rounded-2xl hover:bg-slate-200 transition-all border border-slate-200"
+                                    >
+                                        Go Back
+                                    </button>
+                                    <button
+                                        onClick={handleClearAll}
+                                        disabled={clearConfirmText !== 'DELETE ALL'}
+                                        className={`flex-[1.5] py-4 font-black rounded-2xl transition-all shadow-lg border-b-4 ${clearConfirmText === 'DELETE ALL'
+                                            ? 'bg-rose-600 text-white hover:bg-rose-700 border-rose-800 shadow-rose-500/40 active:border-b-0 active:translate-y-1'
+                                            : 'bg-slate-100 text-slate-300 border-slate-200 grayscale cursor-not-allowed'
+                                            }`}
+                                    >
+                                        DELETE EVERYTHING
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div className="flex gap-3 w-full md:w-auto">
+                )}
+
+                {/* View Switcher & Toolbar */}
+                <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-8 bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+                    <div className="flex bg-slate-100 p-1.5 rounded-xl w-full md:w-auto">
                         <button
-                            onClick={fetchTickets}
-                            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-3 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-700 font-bold transition-all shadow-sm hover:shadow active:scale-[0.98]"
-                            disabled={loading}
+                            onClick={() => setView('transactions')}
+                            className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg font-bold transition-all ${view === 'transactions' ? 'bg-white text-blue-600 shadow-md ring-1 ring-slate-200' : 'text-slate-500 hover:text-slate-700'}`}
                         >
-                            <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-                            <span>Refresh</span>
+                            <List size={18} />
+                            <span>Transactions</span>
                         </button>
                         <button
-                            onClick={downloadCSV}
-                            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-3 bg-slate-900 text-white rounded-xl hover:bg-slate-800 font-bold transition-all shadow-lg shadow-slate-900/20 active:scale-[0.98]"
-                            disabled={loading || tickets.length === 0}
+                            onClick={() => setView('analytics')}
+                            className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg font-bold transition-all ${view === 'analytics' ? 'bg-white text-blue-600 shadow-md ring-1 ring-slate-200' : 'text-slate-500 hover:text-slate-700'}`}
                         >
-                            <Download size={18} />
-                            <span>Export CSV</span>
+                            <BarChart3 size={18} />
+                            <span>Analytics</span>
                         </button>
+                    </div>
+
+                    <div className="flex flex-wrap gap-3 items-center justify-center md:justify-end w-full md:w-auto">
+                        {view === 'transactions' && (
+                            <div className="relative w-full md:w-72">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                                <input
+                                    type="text"
+                                    placeholder="Search ID or Mobile..."
+                                    className="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 outline-none font-medium"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                            </div>
+                        )}
+
+                        <div className="flex gap-2">
+                            <button
+                                onClick={fetchTickets}
+                                className="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-600 font-bold transition-all shadow-sm active:scale-95"
+                                title="Refresh Data"
+                            >
+                                <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+                            </button>
+
+                            <button
+                                onClick={view === 'transactions' ? downloadCSV : downloadAnalyticsCSV}
+                                className="flex items-center gap-2 px-4 py-2.5 bg-slate-900 text-white rounded-xl hover:bg-slate-800 font-bold transition-all shadow-md active:scale-95"
+                            >
+                                <Download size={18} />
+                                <span className="hidden sm:inline">{view === 'transactions' ? 'All Transactions' : '7-Day Report'}</span>
+                            </button>
+
+                            <button
+                                onClick={() => navigate('/accounts')}
+                                className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-bold transition-all shadow-md active:scale-95"
+                            >
+                                <Receipt size={18} />
+                                <span className="hidden sm:inline">Accounts</span>
+                            </button>
+
+                            <button
+                                onClick={() => setShowClearModal(true)}
+                                className="p-2.5 bg-rose-50 text-rose-600 border border-rose-200 rounded-xl hover:bg-rose-600 hover:text-white transition-all group"
+                                title="Clear All History"
+                            >
+                                <Trash2 size={18} className="group-hover:animate-pulse" />
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                {/* Data Table */}
+                {/* Content Area */}
                 <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-200/60 overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="bg-slate-50/50 border-b border-slate-200">
-                                    <th className="px-6 py-5 text-xs font-extrabold text-slate-500 uppercase tracking-wider">Ticket ID</th>
-                                    <th className="px-6 py-5 text-xs font-extrabold text-slate-500 uppercase tracking-wider">Date & Time</th>
-                                    <th className="px-6 py-5 text-xs font-extrabold text-slate-500 uppercase tracking-wider">Customer</th>
-                                    <th className="px-6 py-5 text-xs font-extrabold text-slate-500 uppercase tracking-wider text-right">Amount</th>
-                                    <th className="px-6 py-5 text-xs font-extrabold text-slate-500 uppercase tracking-wider text-center">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {loading ? (
-                                    <tr>
-                                        <td colSpan={5} className="px-6 py-12 text-center">
-                                            <div className="flex flex-col items-center justify-center text-slate-400">
-                                                <RefreshCw size={32} className="animate-spin mb-3 text-slate-300" />
-                                                <span className="font-medium">Loading sales data...</span>
-                                            </div>
-                                        </td>
+                    {view === 'transactions' ? (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="bg-slate-50/50 border-b border-slate-200">
+                                        <th className="px-6 py-5 text-xs font-extrabold text-slate-500 uppercase tracking-wider">Ticket ID</th>
+                                        <th className="px-6 py-5 text-xs font-extrabold text-slate-500 uppercase tracking-wider">Date & Time</th>
+                                        <th className="px-6 py-5 text-xs font-extrabold text-slate-500 uppercase tracking-wider">Customer</th>
+                                        <th className="px-6 py-5 text-xs font-extrabold text-slate-500 uppercase tracking-wider">Payment</th>
+                                        <th className="px-6 py-5 text-xs font-extrabold text-slate-500 uppercase tracking-wider text-right">Amount</th>
                                     </tr>
-                                ) : filteredTickets.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
-                                            No tickets found matching your search.
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    filteredTickets.map((ticket) => (
-                                        <tr key={ticket._id} className="group hover:bg-slate-50/80 transition-colors">
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="bg-slate-100 p-2 rounded-lg text-slate-500 group-hover:bg-white group-hover:shadow-sm transition-all">
-                                                        <Receipt size={16} />
-                                                    </div>
-                                                    <span className="font-mono text-sm font-bold text-slate-700">{ticket.id}</span>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {loading ? (
+                                        <tr>
+                                            <td colSpan={5} className="px-6 py-12 text-center">
+                                                <div className="flex flex-col items-center justify-center text-slate-400">
+                                                    <RefreshCw size={32} className="animate-spin mb-3 text-slate-300" />
+                                                    <span className="font-medium">Loading sales data...</span>
                                                 </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex flex-col">
-                                                    <span className="font-bold text-slate-700 text-sm">{new Date(ticket.createdAt).toLocaleDateString()}</span>
-                                                    <span className="text-xs text-slate-400 font-medium">{new Date(ticket.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                {ticket.mobile ? (
-                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
-                                                        {ticket.mobile}
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-slate-400 text-sm">-</span>
-                                                )}
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <span className="text-emerald-600 font-black text-base">₹{ticket.amount.toLocaleString()}</span>
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 border border-emerald-200">
-                                                    Paid
-                                                </span>
                                             </td>
                                         </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                    {/* Footer */}
+                                    ) : filteredTickets.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
+                                                No tickets found matching your search.
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        filteredTickets.map((ticket) => (
+                                            <tr key={ticket._id} className="group hover:bg-slate-50/80 transition-colors">
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="bg-slate-100 p-2 rounded-lg text-slate-500 group-hover:bg-white group-hover:shadow-sm transition-all">
+                                                            <Receipt size={16} />
+                                                        </div>
+                                                        <span className="font-mono text-sm font-bold text-slate-700">{ticket.id}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex flex-col">
+                                                        <span className="font-bold text-slate-700 text-sm">{new Date(ticket.createdAt).toLocaleDateString()}</span>
+                                                        <span className="text-xs text-slate-400 font-medium">{new Date(ticket.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    {ticket.mobile ? (
+                                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                                                            {ticket.mobile}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-slate-400 text-sm">-</span>
+                                                    )}
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border ${ticket.paymentMode?.toLowerCase() === 'upi'
+                                                        ? 'bg-blue-100 text-blue-700 border-blue-200'
+                                                        : 'bg-amber-100 text-amber-700 border-amber-200'
+                                                        }`}>
+                                                        {ticket.paymentMode?.toUpperCase() || 'CASH'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <span className="text-emerald-600 font-black text-base">₹{ticket.amount.toLocaleString()}</span>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="bg-slate-50/50 border-b border-slate-200">
+                                        <th className="px-6 py-5 text-xs font-extrabold text-slate-500 uppercase tracking-wider">Date</th>
+                                        <th className="px-6 py-5 text-xs font-extrabold text-slate-500 uppercase tracking-wider text-center">Tickets Sold</th>
+                                        <th className="px-6 py-5 text-xs font-extrabold text-slate-500 uppercase tracking-wider text-right">Cash Revenue</th>
+                                        <th className="px-6 py-5 text-xs font-extrabold text-slate-500 uppercase tracking-wider text-right">UPI Revenue</th>
+                                        <th className="px-6 py-5 text-xs font-extrabold text-slate-500 uppercase tracking-wider text-right">Daily Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {getAnalyticsData().map((day) => (
+                                        <tr key={day.date} className="hover:bg-slate-50/80 transition-colors">
+                                            <td className="px-6 py-4">
+                                                <span className="font-bold text-slate-700">{new Date(day.date).toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short' })}</span>
+                                            </td>
+                                            <td className="px-6 py-4 text-center">
+                                                <span className="font-black text-slate-600">{day.count}</span>
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <span className="text-amber-600 font-bold">₹{day.cash.toLocaleString()}</span>
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <span className="text-blue-600 font-bold">₹{day.upi.toLocaleString()}</span>
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <span className="text-emerald-600 font-black text-lg">₹{day.revenue.toLocaleString()}</span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+
+                    {/* Footer Summary */}
                     <div className="px-6 py-4 border-t border-slate-200 bg-slate-50/50 flex flex-col md:flex-row justify-between items-center text-sm text-slate-500 gap-4">
-                        <span className="font-medium">Showing <span className="text-slate-900 font-bold">{filteredTickets.length}</span> tickets</span>
-                        <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
-                            <span>Total Revenue:</span>
-                            <span className="font-black text-slate-900 text-lg">₹{totalRevenue.toLocaleString()}</span>
+                        <span className="font-medium">Summary for last <span className="text-slate-900 font-bold">{tickets.length}</span> tickets</span>
+                        <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
+                                <span className="text-slate-400 font-bold text-xs uppercase">Overall Total:</span>
+                                <span className="font-black text-slate-900 text-lg">₹{totalRevenue.toLocaleString()}</span>
+                            </div>
                         </div>
                     </div>
                 </div>

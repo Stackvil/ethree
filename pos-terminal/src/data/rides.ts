@@ -1,5 +1,6 @@
 export interface Ride {
     id: string;
+    _id?: string;
     name: string;
     price: number;
     image?: string;
@@ -99,8 +100,57 @@ export const rides: Ride[] = [
         image: 'trampoline/trampoline.webp'
     },
     {
+        id: '14',
+        name: '360 Cycle',
+        price: 150,
+        description: 'Thrilling 360-degree cycling experience.',
+        image: '360 cycle/360-degree-cycle-500x500.webp'
+    },
+    {
+        id: '15',
+        name: 'Basket Ball',
+        price: 100,
+        description: 'Shoot hoops and win scores.',
+        image: 'basket ball/images.jpg'
+    },
+    {
+        id: '16',
+        name: 'Bungee Jump',
+        price: 150,
+        description: 'Bungee jumping trampoline for kids.',
+        image: 'Bungee jump/bungee-jumping-trampoline.jpeg'
+    },
+    {
+        id: '17',
+        name: 'Free Ride',
+        price: 0,
+        description: 'Complimentary ride experience.',
+        image: 'free ride/images (1).jpg'
+    },
+    {
+        id: '18',
+        name: 'Mini Wheel Ride',
+        price: 100,
+        description: 'Small ferris wheel for younger kids.',
+        image: 'mini wheel ride/1.avif'
+    },
+    {
+        id: '19',
+        name: 'Combo Adult (5 Rides)',
+        price: 500,
+        description: '5 Rides for Adults.',
+        image: 'combo adult/E4LOGO.jpeg'
+    },
+    {
+        id: '20',
+        name: 'Combo Child (5 Rides)',
+        price: 400,
+        description: '5 Rides for Children.',
+        image: 'combo child/E4LOGO.jpeg'
+    },
+    {
         id: '21',
-        name: 'Combo Ticket (5 Rides)',
+        name: 'Ticket Summary Pas (5 Rides)',
         price: 500,
         description: 'Special Pass: Any 5 rides of your choice!',
         image: 'E4LOGO.jpeg'

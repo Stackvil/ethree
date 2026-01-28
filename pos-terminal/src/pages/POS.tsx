@@ -133,12 +133,12 @@ export default function POS() {
         setIsSyncing(true);
         const pending = JSON.parse(localStorage.getItem('pending_tickets') || '[]');
 
-        if (pending.length === 0) {
+        if (!pending || pending.length === 0) {
             setIsSyncing(false);
             return;
         }
 
-        console.log(`Attempting to sync ${pending.length} tickets...`);
+        console.log(`Attempting to sync ${pending.length} tickets to ${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/tickets`);
 
         try {
             await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/tickets`, pending);
@@ -154,10 +154,11 @@ export default function POS() {
 
     const addToCart = useCallback((ride: Ride) => {
         setCart(prev => {
-            const existing = prev.find(item => item.id === ride.id);
+            const rideId = ride._id || ride.id;
+            const existing = prev.find(item => (item._id || item.id) === rideId);
             if (existing) {
                 return prev.map(item =>
-                    item.id === ride.id ? { ...item, quantity: item.quantity + 1 } : item
+                    (item._id || item.id) === rideId ? { ...item, quantity: item.quantity + 1 } : item
                 );
             }
             return [...prev, { ...ride, quantity: 1 }];
@@ -166,7 +167,8 @@ export default function POS() {
 
     const updateQuantitySimple = useCallback((id: string, delta: number) => {
         setCart(prev => prev.map(item => {
-            if (item.id === id) {
+            const itemId = item._id || item.id;
+            if (itemId === id) {
                 return { ...item, quantity: item.quantity + delta };
             }
             return item;
@@ -490,7 +492,7 @@ export default function POS() {
                                     </div>
                                 ) : (
                                     rides.map(ride => (
-                                        <RideCard key={ride.id} ride={ride} onAdd={addToCart} />
+                                        <RideCard key={ride._id || ride.id} ride={ride} onAdd={addToCart} />
                                     ))
                                 )}
                             </div>

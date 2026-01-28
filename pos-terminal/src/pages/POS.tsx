@@ -131,9 +131,15 @@ export default function POS() {
 
     const syncOfflineTickets = async () => {
         setIsSyncing(true);
-        const pending = JSON.parse(localStorage.getItem('pending_tickets') || '[]');
+        if (!Array.isArray(pending)) {
+            console.error('Pending tickets is not an array, resetting.');
+            localStorage.setItem('pending_tickets', '[]');
+            setPendingCount(0);
+            setIsSyncing(false);
+            return;
+        }
 
-        if (!pending || pending.length === 0) {
+        if (pending.length === 0) {
             setIsSyncing(false);
             return;
         }
@@ -147,6 +153,11 @@ export default function POS() {
             alert(`Synced ${pending.length} offline tickets to server.`);
         } catch (error: any) {
             console.error('Sync failed', error);
+            if (error.response?.status === 400) {
+                console.error('Bad request, data might be malformed. Clearing queue.');
+                localStorage.setItem('pending_tickets', '[]');
+                setPendingCount(0);
+            }
         } finally {
             setIsSyncing(false);
         }

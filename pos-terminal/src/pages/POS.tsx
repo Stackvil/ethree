@@ -435,7 +435,7 @@ export default function POS() {
                                 />
                             </div>
                             <div>
-                                <h1 className="text-lg md:text-xl font-black tracking-tight text-white leading-none">EFOUR <span className="text-amber-400">POS</span> <span className="text-xs text-emerald-400 font-bold ml-1 bg-emerald-900/50 px-1 rounded">v2.5 FINAL UNIFIED</span></h1>
+                                <h1 className="text-lg md:text-xl font-black tracking-tight text-white leading-none">EFOUR <span className="text-amber-400">POS</span> <span className="text-xs text-emerald-400 font-bold ml-1 bg-emerald-900/50 px-1 rounded">v2.6 FINAL UNIFIED</span></h1>
                                 <p className="text-[10px] md:text-xs text-slate-400 font-medium tracking-wide hidden sm:block">ELURU ENTERTAINMENT NETWORK</p>
                             </div>
 

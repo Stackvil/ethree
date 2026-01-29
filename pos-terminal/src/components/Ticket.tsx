@@ -140,7 +140,7 @@ export const Ticket = forwardRef<HTMLDivElement, TicketProps & { subTickets?: an
                         <p style={{ fontSize: '7pt' }} className="font-black uppercase tracking-tight">VALID ON BOOKED DATE ONLY • EXPIRES AFTER SCAN</p>
                     </div>
                     <div className="mt-1.5 border-2 border-black py-1">
-                        <p style={{ fontSize: '12pt' }} className="font-black tracking-widest leading-none">WWW.EFOUR-ELURU.COM</p>
+                        <p style={{ fontSize: '12pt' }} className="font-black tracking-widest leading-none">WWW.EFOUR-ELURU.COM • <span className="text-[8pt] opacity-80">v3.9</span></p>
                     </div>
                 </div>
 

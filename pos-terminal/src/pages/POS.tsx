@@ -444,7 +444,7 @@ export default function POS() {
                                 />
                             </div>
                             <div>
-                                <h1 className="text-lg md:text-xl font-black tracking-tight text-white leading-none">EFOUR <span className="text-amber-400">POS</span> <span className="text-xs text-amber-400 font-bold ml-1 bg-amber-900 px-1 rounded ring-1 ring-amber-500/50">v3.8</span></h1>
+                                <h1 className="text-lg md:text-xl font-black tracking-tight text-white leading-none flex items-center gap-1.5">EFOUR <span className="text-amber-400">POS</span> <span className="text-xs text-amber-400 font-bold bg-amber-900 px-1 rounded ring-1 ring-amber-500/50">v3.9</span> <span className="text-[9px] bg-emerald-500 text-white px-1 rounded-full animate-pulse tracking-tighter shadow-[0_0_10px_rgba(16,185,129,0.5)]">ULTIMATE SYNC</span></h1>
                                 <p className="text-[10px] md:text-xs text-slate-400 font-medium tracking-wide hidden sm:block">ELURU ENTERTAINMENT NETWORK</p>
                             </div>
 
